@@ -329,8 +329,8 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </div>
-        
-{/* space for stage 3 chart*/}
+
+      {/* space for stage 3 chart*/}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
