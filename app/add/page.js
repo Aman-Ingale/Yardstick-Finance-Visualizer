@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -25,6 +26,7 @@ export default function Add() {
       amount: "",
       description: "",
       date: "",
+      category : "Other"
     },
   });
   // Handling back button logic
@@ -56,11 +58,11 @@ export default function Add() {
       <div className="flex justify-center items-center  px-4 bg-gray-50 h-screen">
         <Card className="w-full max-w-xl p-6 pt-0 shadow-lg bg-white space-y-6 gap-4">
           <span className="my-2  font-semibold   text-sm text-gray-700 ">
-          <button onClick={handleClickBack} className="mb-0 cursor-pointer flex items-center gap-1">
+            <button onClick={handleClickBack} className="mb-0 cursor-pointer flex items-center gap-1">
               <ArrowLeft className="m-0 p-0 " size={16} />
               <div>Back</div>
-          </button>
-            </span>
+            </button>
+          </span>
           <CardHeader >
             <CardTitle >
 
@@ -98,21 +100,46 @@ export default function Add() {
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} required />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                <div className="flex justify-between">
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl className="w-40">
+                          <Input type="date" {...field} required />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} required>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Groceries">Groceries</SelectItem>
+                            <SelectItem value="Healthcare">Healthcare</SelectItem>
+                            <SelectItem value="Housing">Housing</SelectItem>
+                            <SelectItem value="Entertainment">Entertainment</SelectItem>
+                            <SelectItem value="Transportation">Transportation</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <Button type="submit" className="w-full mt-4">Submit</Button>
               </form>
             </Form>

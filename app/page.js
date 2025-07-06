@@ -1,14 +1,19 @@
 // Dashboard page
 "use client";
+
 import { useEffect, useState } from "react";
-import { Home, Star, Wallet, Plus, Pencil, Trash2 } from "lucide-react";
+import { Home, Star, Wallet, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import {
   Bar,
   BarChart,
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from "recharts";
 import { motion } from "framer-motion";
 import {
@@ -34,22 +39,30 @@ export default function Dashboard() {
   const [monthlyData, setmonthlyData] = useState([])
   const [total_amount, setTotal_amount] = useState(0)
   const [total_transactions, setTotal_transactions] = useState(0)
-  const [top_category, setTop_category] = useState({category : "Others", total : 0})
+  const [top_category, setTop_category] = useState({ category: "Others", total: 0 })
   const [selectedYear, setSelectedYear] = useState(2025)
   const [edited, setEdited] = useState(0);
   const [editingRow, setEditingRow] = useState(null)
   const [formValues, setFormValues] = useState({});
+  const [recentTxn, setRecentTxn] = useState({});
+  const [pieMonth, setPieMonth] = useState("Jul");
+
+
   // DELETE request for deleting a transaction
   async function handleDeleteClick(txid) {
     setEdited(prevCount => prevCount + 1)
     const res = await fetch(`/api/transaction`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({_id : txid}),
+      body: JSON.stringify({ _id: txid }),
     });
     const result = await res.json();
-    console.log("Result:", result.message);
-
+    if (result.success) {
+      toast.success('Transaction Deleted!');
+    }
+    else {
+      toast.error('Something went wrong')
+    }
   }
   // Handling logic for edit button click
   const handleEditClick = (index, txn, txid) => {
@@ -86,52 +99,42 @@ export default function Dashboard() {
       body: JSON.stringify(formValues),
     });
     const result = await res.json();
-    console.log("Result:", result.data);
+    if (result.success) {
+      toast.success('Transaction updated!');
+    }
+    else {
+      toast.error('Something went wrong')
+    }
     setEditingRow(null);
   };
   const handleCancel = () => {
     setEditingRow(null);
   };
-  //Static data for pie chart (stage 2)
-  const staticDocumentData = {
-    riskLevel: 'medium',
-    complianceScore: 75,
-    keyFindings: ['Clause 5.2 non-compliance', 'Missing signature block'],
-    riskDistribution: [
-      { label: 'Low', value: 40 },
-      { label: 'Medium', value: 50 },
-      { label: 'High', value: 10 },
-    ],
-    complianceGaps: [
-      { category: 'Privacy', value: 20 },
-      { category: 'Security', value: 40 },
-      { category: 'Regulatory', value: 30 },
-      { category: 'Contractual', value: 10 },
-    ],
-  };
 
-  const [documentData, setDocumentData] = useState(null);
+  const [categoryDistribution, setCategoryDistribution] = useState(null);
   // GET request for getting all transactions and data for charts
   useEffect(() => {
-    setDocumentData(staticDocumentData);
     async function getAllTransactions() {
       const r = await fetch("/api/transaction", {
         method: "GET",
       });
       const result = await r.json();
 
-      if(result.success){
-             setTransactions(result.transactions);
-      setmonthlyData(result.months);
-      setTotal_amount(result.total_amount)
-      setTotal_transactions(result.total_transactions)
-      setTop_category(result.top_category)
+      if (result.success) {
+        console.log()
+        setRecentTxn(result.recentTxn)
+        setTransactions(result.transactions);
+        setCategoryDistribution(result.detailed_category_data);
+        setmonthlyData(result.months);
+        setTotal_amount(result.total_amount)
+        setTotal_transactions(result.total_transactions)
+        setTop_category(result.top_category)
       }
-      else{
+      else {
         console.log(result.message);
         toast.error('Network Error', {
-              description: result.message,
-            })
+          description: result.message,
+        })
       }
     }
     getAllTransactions()
@@ -142,7 +145,7 @@ export default function Dashboard() {
   }
 
   // loading text if page is not ready
-  if (!documentData) {
+  if (!categoryDistribution) {
     return <div className="w-screen h-screen flex justify-center items-center">Loading...</div>;
   }
   return (
@@ -165,29 +168,11 @@ export default function Dashboard() {
           {/* Total amount of transaction (sum of amount of all transaction) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total amount</CardTitle>
+              <CardTitle className="text-sm font-medium">Total expences</CardTitle>
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{total_amount}</div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          {/* Total number of transactions */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total transactions</CardTitle>
-              <Home className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold"> {total_transactions} </div>
-              {/* <p className="text-xs text-muted-foreground">+12% from last month</p> */}
             </CardContent>
           </Card>
         </motion.div>
@@ -203,12 +188,32 @@ export default function Dashboard() {
               <CardTitle className="text-sm font-medium">Top Category</CardTitle>
               <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{top_category?.category || "Other"+"(₹"+top_category?.total  +")"}</div>
+            <CardContent >
+              <div className="text-2xl font-bold">{top_category?.category || "Other" + "(₹" + top_category?.total + ")"}</div>
               {/* <p className="text-xs text-muted-foreground">+2.5</p> */}
             </CardContent>
           </Card>
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          {/* Total number of transactions */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Recent Transaction</CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="flex justify-between items-center">
+              <span className="text-2xl font-bold"> {recentTxn.category + " - ₹" + recentTxn.amount} </span>
+              <span className="text-sm "> {new Date(recentTxn.date).toLocaleDateString()} </span>
+              {/* <p className="text-xs text-muted-foreground">+12% from last month</p> */}
+            </CardContent>
+          </Card>
+        </motion.div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -265,40 +270,67 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Card>
+          <Card >
             <CardHeader>
-              <CardTitle>Category Overview</CardTitle>
-              <CardDescription>Category wise transaction details</CardDescription>
+              <CardTitle className="flex w-full flex-row justify-between">
+                <div>Category Overview</div>
+                {/* <CardDescription>Category wise transaction details</CardDescription> */}
+                <div >
+                  {/* Static dropdown menu for months*/}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="flex gap-1 items-center cursor-pointer">
+                      <ChevronDown size={16} />
+                      {pieMonth}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Select Month</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {[
+                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                      ].map((month) => (
+                        <DropdownMenuItem
+                          key={month}
+                          onSelect={() => setPieMonth(month)}
+                        >
+                          {month}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex justify-center items-center">
 
 
-              {/* <PieChart width={400} height={300}>
+              <PieChart width={400} height={300}>
                 <Pie
-                  data={documentData.riskDistribution}
-                  dataKey="value"
-                  nameKey="label"
+                  data={categoryDistribution.find(entry => entry.month === pieMonth)?.categories || []}
+                  dataKey="percent"
+                  nameKey="category"
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
                   fill="#8884d8"
                   label
                 >
-                  {documentData.riskDistribution.map((entry, index) => (
+                  {categoryDistribution.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={['#00C49F', '#FFBB28', '#FF8042'][index % 3]}
+                      fill={['#4CAF50', '#FF5722', '#2196F3', '#9C27B0', '#FFC107', '#9E9E9E'][index % 6]}
                     />
                   ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
-              </PieChart> */}
+              </PieChart>
             </CardContent>
           </Card>
         </motion.div>
       </div>
-
+        
+{/* space for stage 3 chart*/}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
