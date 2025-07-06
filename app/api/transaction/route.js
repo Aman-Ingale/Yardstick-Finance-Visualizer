@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import TransactionModel from "@/models/transactionModel";
+/**
+ * Method: POST
+ * Description: Add transactions
+ */
 export async function POST(req) {
-  await dbConnect();
+  try{
+    await dbConnect();
+  }
+  catch{
+    return NextResponse.json({ success: false, message: "DB connection error" });
+  }
   const data = await req.json()
   console.log(data)
   try {
@@ -18,21 +27,28 @@ export async function POST(req) {
     return null;
   }
 }
-
-
+/**
+ * Method: GET
+ * Description: GET all transactions and values for charts
+ */
 export async function GET() {
   try {
+  try{
     await dbConnect();
-
+  }
+  catch{
+    return NextResponse.json({ success: false, message: "DB connection error" });
+  }
     const allTransactions = await TransactionModel.find({});
     const plainTransactions = allTransactions.map(pro =>
       JSON.parse(JSON.stringify(pro))
     );
 
     const monthOrder = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
+
 
     const monthTotals = {};
     monthOrder.forEach(month => {
@@ -41,7 +57,7 @@ export async function GET() {
 
     plainTransactions.forEach((txn) => {
       const date = new Date(txn.date);
-      const monthKey = date.toLocaleString('default', { month: 'long' });
+      const monthKey = date.toLocaleString('default', { month: 'short' });
       monthTotals[monthKey] += txn.amount;
     });
 
@@ -74,37 +90,55 @@ export async function GET() {
   current.total > prev.total ? current : prev
 );
     return NextResponse.json({
+      success:true,
       transactions: plainTransactions,
       months: months_data,
       total_transactions : plain_total_transactions,
       total_amount : plain_total_amount,
       top_category : topCategory,
-    });
+    }, {status : 200});
 
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    return NextResponse.json({success:false, message: "Something went wrong." }, { status: 500 });
   }
 }
+/**
+ * Method: PUT
+ * Description: Update the transaction
+ */
 export async function PUT(req){
+  try{
     await dbConnect();
-    const updateData = await req.json();
+  }
+  catch{
+    return NextResponse.json({ success: false, message: "DB connection error" });
+  }    const updateData = await req.json();
     try {
         
         const transaction = await TransactionModel.updateOne(
         { _id: updateData._id },
         { $set: updateData}
     );
-        return NextResponse.json({success:true,data:transaction});
+        return NextResponse.json({success:true,data:transaction},{status: 500});
     } catch (error) { 
         console.log(error)
-        return NextResponse.json({success:false,data:{}});
+        return NextResponse.json({success:false,data:{} },{status: 500});
 
     }
 }
+/**
+ * Method: DELETE
+ * Description: Delete the transaction
+ */
 export async function DELETE(req) {
-  await dbConnect();
-
+  try{
+    await dbConnect();
+  }
+  catch{
+    return NextResponse.json({ success: false, message: "DB connection error" });
+  }  try {
+    
   const {_id} = await req.json();
   console.log
   if (!_id) {
@@ -113,6 +147,9 @@ export async function DELETE(req) {
 
   await TransactionModel.findByIdAndDelete(_id);
 
-  return NextResponse.json({ message: "Transaction deleted" });
+  return NextResponse.json({ message: "Transaction deleted" }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+  }
 }
 

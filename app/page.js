@@ -1,8 +1,7 @@
+// Dashboard page
 "use client";
-import { useForm } from "react-hook-form";
-
 import { useEffect, useState } from "react";
-import { Home, Star, Wallet, Mail, Plus, Pencil, Trash2 } from "lucide-react";
+import { Home, Star, Wallet, Plus, Pencil, Trash2 } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -11,20 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from "recharts";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
 import { motion } from "framer-motion";
-import {
-  PieChart, Pie, Cell, Legend
-} from 'recharts';
-// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -32,7 +18,6 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import {
@@ -43,25 +28,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-// const monthlyData = [
-//   { name: "Jan", earnings: 4000 },
-//   { name: "Feb", earnings: 3000 },
-//   { name: "Mar", earnings: 5000 },
-//   { name: "Apr", earnings: 7000 },
-//   { name: "May", earnings: 6000 },
-// ];
-
+import { toast } from "sonner"
 export default function Dashboard() {
-  const [date, setDate] = useState(new Date());
   const [transactions, setTransactions] = useState([])
   const [monthlyData, setmonthlyData] = useState([])
   const [total_amount, setTotal_amount] = useState(0)
   const [total_transactions, setTotal_transactions] = useState(0)
-  const [top_category, setTop_category] = useState({})
+  const [top_category, setTop_category] = useState({category : "Others", total : 0})
   const [selectedYear, setSelectedYear] = useState(2025)
   const [edited, setEdited] = useState(0);
   const [editingRow, setEditingRow] = useState(null)
   const [formValues, setFormValues] = useState({});
+  // DELETE request for deleting a transaction
   async function handleDeleteClick(txid) {
     setEdited(prevCount => prevCount + 1)
     const res = await fetch(`/api/transaction`, {
@@ -73,6 +51,7 @@ export default function Dashboard() {
     console.log("Result:", result.message);
 
   }
+  // Handling logic for edit button click
   const handleEditClick = (index, txn, txid) => {
     setEditingRow(index);
     setFormValues({
@@ -87,11 +66,13 @@ export default function Dashboard() {
   const handleInputChange = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
   };
+  // helper function for updating transaction array
   function replaceItemByIndex(array, index, newItem) {
     const newArray = [...array];
     newArray[index] = newItem;
     return newArray;
   }
+  //PUT request for updating a transaction
   const handleSave = async () => {
     const entry = transactions.findIndex((transaction) => transaction._id == formValues._id)
     console.log(entry)
@@ -111,14 +92,7 @@ export default function Dashboard() {
   const handleCancel = () => {
     setEditingRow(null);
   };
-  const form = useForm({
-    defaultValues: {
-      amount: "",
-      description: "Rent",
-      date: "",
-
-    },
-  });
+  //Static data for pie chart (stage 2)
   const staticDocumentData = {
     riskLevel: 'medium',
     complianceScore: 75,
@@ -137,7 +111,7 @@ export default function Dashboard() {
   };
 
   const [documentData, setDocumentData] = useState(null);
-
+  // GET request for getting all transactions and data for charts
   useEffect(() => {
     setDocumentData(staticDocumentData);
     async function getAllTransactions() {
@@ -145,43 +119,50 @@ export default function Dashboard() {
         method: "GET",
       });
       const result = await r.json();
-      setTransactions(result.transactions);
+
+      if(result.success){
+             setTransactions(result.transactions);
       setmonthlyData(result.months);
       setTotal_amount(result.total_amount)
       setTotal_transactions(result.total_transactions)
       setTop_category(result.top_category)
+      }
+      else{
+        console.log(result.message);
+        toast.error('Network Error', {
+              description: result.message,
+            })
+      }
     }
     getAllTransactions()
   }, [edited])
-  // ✅ Hardcoded static provider data
   const router = useRouter();
   async function handleAdd() {
     router.push('/add');
   }
-  async function onSubmit(values) {
 
-  }
-
+  // loading text if page is not ready
   if (!documentData) {
-    return <div>Loading...</div>;
+    return <div className="w-screen h-screen flex justify-center items-center">Loading...</div>;
   }
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="w-full flex items-center justify-between">
         <h1 className="text-4xl font-bold mb-5 text-center">Dashboard</h1>
+        {/* Add button for adding new transaction, redirecting to /add route */}
         <Button variant="outline" size="lg" onClick={handleAdd} className="cursor-pointer">
           <Plus />
           <span className="hidden lg:inline">Add</span>
         </Button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
+          {/* Total amount of transaction (sum of amount of all transaction) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total amount</CardTitle>
@@ -189,7 +170,6 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">₹{total_amount}</div>
-              {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
             </CardContent>
           </Card>
         </motion.div>
@@ -199,6 +179,7 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
+          {/* Total number of transactions */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total transactions</CardTitle>
@@ -216,20 +197,20 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
+          {/* The category with highest amount of transaction (Stage 2)*/}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Top Category</CardTitle>
               <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{top_category.category} (₹{top_category.total})</div>
+              <div className="text-2xl font-bold">{top_category?.category || "Other"+"(₹"+top_category?.total  +")"}</div>
               {/* <p className="text-xs text-muted-foreground">+2.5</p> */}
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      {/* Charts and PieChart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -237,11 +218,13 @@ export default function Dashboard() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="lg:col-span-2"
         >
+          {/* Bar chart for monthly transaction overview, shows sum of amount of each month */}
           <Card>
             <CardHeader>
               <CardTitle className="flex w-full flex-row justify-between">
                 <div>Monthly Overview</div>
                 <div>
+                  {/* Static dropdown menu for year (NOT ADDED ANY LOGIC) */}
                   <DropdownMenu>
                     <DropdownMenuTrigger>
                       {selectedYear}
@@ -316,12 +299,12 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Recent Jobs */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
+        {/* List of all the transactions in tabular form */}
         <Card>
           <CardHeader className="flex flex-col justify-center items-center">
             <CardTitle>Transactions</CardTitle>
@@ -340,9 +323,8 @@ export default function Dashboard() {
               </thead>
 
               <tbody className="divide-y">
-                {transactions.map((txn, index) => (
+                {transactions?.map((txn, index) => (
                   <tr key={index} className="hover:bg-muted">
-                    {/* Description */}
                     <td className="text-left py-3">
                       {editingRow === index ? (
                         <input
@@ -356,7 +338,6 @@ export default function Dashboard() {
                       )}
                     </td>
 
-                    {/* Date */}
                     <td className="text-center py-3">
                       {editingRow === index ? (
                         <input
@@ -370,7 +351,6 @@ export default function Dashboard() {
                       )}
                     </td>
 
-                    {/* Amount */}
                     <td className="text-center py-3 font-medium">
                       {editingRow === index ? (
                         <input
@@ -384,7 +364,6 @@ export default function Dashboard() {
                       )}
                     </td>
 
-                    {/* Category */}
                     <td className="text-right py-3">
                       {editingRow === index ? (
                         <select
@@ -404,7 +383,6 @@ export default function Dashboard() {
                       )}
                     </td>
 
-                    {/* Actions */}
                     <td className="text-right py-3">
                       {editingRow === index ? (
                         <div className="flex justify-end gap-3 items-center">
@@ -440,15 +418,3 @@ export default function Dashboard() {
     </div>
   );
 }
-// <td>
-//   <span>
-//     <Input
-//       id={txn._id}
-//       value={txn.description || ""}
-//       onChange={(e) =>
-//         setProfile((prev) => ({ ...(prev || {}), tnx.description : e.target.value }))
-//       }
-//       disabled={!isEditing}
-//     />
-//   </span>
-// </td>
