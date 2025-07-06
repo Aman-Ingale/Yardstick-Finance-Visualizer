@@ -15,6 +15,11 @@ import {
   Cell,
   Legend
 } from "recharts";
+import dynamic from "next/dynamic";
+
+const CategoryPieChart = dynamic(() => import("@/components/CategoryPieChart"), {
+  ssr: false,
+});
 import { motion } from "framer-motion";
 import {
   Card,
@@ -265,70 +270,11 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card >
-            <CardHeader>
-              <CardTitle className="flex w-full flex-row justify-between">
-                <div>Category Overview</div>
-                {/* <CardDescription>Category wise transaction details</CardDescription> */}
-                <div >
-                  {/* Static dropdown menu for months*/}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="flex gap-1 items-center cursor-pointer">
-                      <ChevronDown size={16} />
-                      {pieMonth}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuLabel>Select Month</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {[
-                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                      ].map((month) => (
-                        <DropdownMenuItem
-                          key={month}
-                          onSelect={() => setPieMonth(month)}
-                        >
-                          {month}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center items-center">
-
-
-              <PieChart width={400} height={300}>
-                <Pie
-                  data={categoryDistribution.find(entry => entry.month === pieMonth)?.categories || []}
-                  dataKey="percent"
-                  nameKey="category"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  label
-                >
-                  {categoryDistribution.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={['#4CAF50', '#FF5722', '#2196F3', '#9C27B0', '#FFC107', '#9E9E9E'][index % 6]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+      <CategoryPieChart
+        pieMonth={pieMonth}
+        setPieMonth={setPieMonth}
+        categoryDistribution={categoryDistribution}
+      />      </div>
 
       {/* space for stage 3 chart*/}
       <motion.div
